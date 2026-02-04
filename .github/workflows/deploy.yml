@@ -33,6 +33,7 @@ jobs:
       - name: Install WordPress via Helm
         run: |
           helm install my-wordpress bitnami/wordpress \
+            --version 17.2.0 \
             --namespace default \
             --set service.type=ClusterIP \
             --set mariadb.auth.rootPassword=securerootpass2026 \
