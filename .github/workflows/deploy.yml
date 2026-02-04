@@ -1,4 +1,4 @@
-name: Deploy WordPress via Helm on kind
+ame: Deploy WordPress via Helm on kind
 
 on:
   push:
@@ -33,7 +33,7 @@ jobs:
       - name: Install WordPress via Helm
         run: |
           helm install my-wordpress bitnami/wordpress \
-            --version 16.0.0 \
+            --version 6.0.0 \
             --namespace default \
             --set service.type=ClusterIP \
             --set mariadb.auth.rootPassword=securerootpass2026 \
