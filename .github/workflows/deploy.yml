@@ -1,4 +1,4 @@
-ame: Deploy WordPress via Helm on kind
+name: Deploy WordPress via Helm on kind
 
 on:
   push:
