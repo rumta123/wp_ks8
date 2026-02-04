@@ -1,41 +1,64 @@
-name: Deploy WordPress via Helm
+name: Deploy WordPress via Helm on kind
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:  # ← позволяет запустить вручную из веб-интерфейса
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
-      
-      - name: Setup kubectl
-        uses: azure/setup-kubectl@v3
-      
-      - name: Setup Helm
+
+      - name: Set up kind cluster
+        uses: helm/kind-action@v1.10.0
+        with:
+          cluster_name: coursework-cluster
+          node_image: kindest/node:v1.28.0
+
+      - name: Set up Helm
         uses: azure/setup-helm@v3
-      
-      - name: Configure Kubernetes context
+        with:
+          version: v3.14.0
+
+      - name: Add Bitnami Helm repository
         run: |
-          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
-      
-      - name: Add Bitnami repo
-        run: helm repo add bitnami https://charts.bitnami.com/bitnami && helm repo update
-      
-      - name: Deploy WordPress
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo update
+
+      - name: Install WordPress via Helm
         run: |
-          kubectl create namespace wordpress-ci --dry-run=client -o yaml | kubectl apply -f -
-          helm upgrade --install my-wordpress bitnami/wordpress \
-            --namespace wordpress-ci \
+          helm install my-wordpress bitnami/wordpress \
+            --namespace default \
             --set service.type=ClusterIP \
+            --set mariadb.auth.rootPassword=securerootpass2026 \
             --set mariadb.auth.password=securepass2026 \
-            --set wordpressPassword=adminpass2026
-      
+            --set wordpressPassword=adminpass2026 \
+            --wait \
+            --timeout 300s
+
       - name: Verify deployment
         run: |
-          kubectl rollout status deployment/my-wordpress -n wordpress-ci --timeout=180s
-          echo "✅ WordPress deployed successfully!"
+          echo "✅ Checking WordPress pods..."
+          kubectl get pods -l app.kubernetes.io/name=wordpress -o wide
+          
+          echo ""
+          echo "✅ Checking MariaDB pods..."
+          kubectl get pods -l app.kubernetes.io/name=mariadb -o wide
+          
+          echo ""
+          echo "✅ Deployment status:"
+          kubectl rollout status deployment/my-wordpress --timeout=60s
+          
+          echo ""
+          echo "🎉 SUCCESS: WordPress deployed via Helm on kind cluster!"
+
+      - name: Cleanup (optional)
+        if: always()
+        run: |
+          echo "🧹 Cleaning up Helm release..."
+          helm uninstall my-wordpress || true
