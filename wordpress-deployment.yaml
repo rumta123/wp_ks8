@@ -1,0 +1,6 @@
+replicas: 2
+containers:
+  - image: wordpress:6.5.2
+    env:
+      - name: WORDPRESS_DB_HOST
+        value: mariadb
